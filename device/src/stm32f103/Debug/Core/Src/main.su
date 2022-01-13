@@ -1,0 +1,10 @@
+main.c:616:13:MX_GPIO_Init	48	static
+main.c:147:15:mapGpioPort	0	static
+main.c:174:10:mapGpioPin	0	static
+main.c:236:10:mapGpioDir	0	static
+main.c:268:10:mapAdcPin	0	static
+main.c:646:6:Error_Handler	0	static,ignoring_inline_asm
+main.c:513:13:MX_ADC1_Init	8	static
+main.c:549:13:MX_ADC2_Init	8	static
+main.c:463:6:SystemClock_Config	88	static
+main.c:315:5:main	40	static
