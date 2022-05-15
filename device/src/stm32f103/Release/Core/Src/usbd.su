@@ -1,9 +1,0 @@
-usbd.c:374:18:USBD_DEV_GetFSCfgDesc	0	static
-usbd.c:382:17:USBD_DEV_DataIn	0	static
-usbd.c:399:18:USBD_DEV_GetDeviceQualifierDesc	0	static
-usbd.c:231:17:USBD_DEV_Setup	24	static
-usbd.c:213:17:USBD_DEV_DeInit	8	static
-usbd.c:184:17:USBD_DEV_Init	16	static
-usbd.c:389:17:USBD_DEV_DataOut	0	static
-usbd.c:346:9:USBD_DEV_SendReport	8	static
-usbd.c:367:10:USBD_DEV_GetPollingInterval	0	static
