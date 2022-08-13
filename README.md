@@ -16,13 +16,11 @@ Well there are many ways to achieve this and one of them is to download this con
 
 Currently working for raspberry pi pico, just go to the build folder and flash the usbduino.uf2 to your pico.
 
-Then you need go to usbd_driver directory and build the driver for your kernel by running make.
+goto host/lib/examples and look at some examples..
 
-Now you need to load the driver into the kernel by running ```insmod usbd.ko```
+you can build the blink example by running make blink from usbduino/host/lib
 
-Now plug your pico into the usb port of your machine.
-
-After that you need to give the user permission to access the device by ```sudo chmod 777 /dev/usbd```
+now run the example from bin/blink with sudo.
 
 now you are ready to go!
 
