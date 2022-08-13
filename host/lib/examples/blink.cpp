@@ -10,9 +10,9 @@ int main()
 {
     USBD::Usbduino dev;
 
-    if (dev.connect((char *)"/dev/usbd") < 0)
+    if (dev.connect() < 0)
     {
-        printf("Cannot open device!\nMake sure you have the usbd driver running and user has privilages to access it!\n");
+        printf("Cannot open device!\nMake sure you have the privilages to access it!\n");
         return 0;
     }
 
@@ -21,10 +21,12 @@ int main()
     while (1)
     {
         dev.digitalWrite(USER_LED, 1);
-        dev.delay(500);
+        dev.delay(50);
         dev.digitalWrite(USER_LED, 0);
-        dev.delay(500);
+        dev.delay(50);
     }
+
+    dev.release();
 
     return 0;
 }

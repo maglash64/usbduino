@@ -1,10 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <cstdlib>
-#include <cerrno>
-#include <fcntl.h>
-#include <unistd.h>
+#include "libusb.h"
 
 namespace USBD
 {
@@ -115,9 +112,11 @@ namespace USBD
     class Usbduino
     {
     private:
-        int device;
+        libusb_device_handle *device;
+    private:
         int is_open;
         int ret;
+        int len;
         uint8_t buffer[64];
 
     private:
@@ -133,7 +132,7 @@ namespace USBD
         
         ~Usbduino();
         
-        int connect(char *dev);
+        int connect();
         
         int release();
         

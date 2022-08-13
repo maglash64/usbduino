@@ -11,16 +11,35 @@ namespace USBD
     Usbduino::~Usbduino()
     {
         if (is_open)
-            close(device);
+        {
+            libusb_release_interface(device, 0x0);
+
+            libusb_close(device);
+
+            libusb_exit(NULL);
+        }
     }
 
-    int Usbduino::connect(char *dev)
+    int Usbduino::connect()
     {
-        device = open(dev, O_RDWR);
-        if (device < 0)
+        if (libusb_init(NULL) < 0)
         {
-            device = 0;
             return -1;
+        }
+
+        device = libusb_open_device_with_vid_pid(NULL, 0x0483, 0xFF11);
+
+        if (!device)
+        {
+            libusb_exit(NULL);
+            return -2;
+        }
+
+        if (libusb_claim_interface(device, 0x0) < 0)
+        {
+            libusb_close(device);
+            libusb_exit(NULL);
+            return -2;
         }
 
         is_open = 1;
@@ -30,7 +49,13 @@ namespace USBD
     int Usbduino::release()
     {
         if (is_open)
-            close(device);
+        {
+            libusb_release_interface(device, 0x0);
+
+            libusb_close(device);
+
+            libusb_exit(NULL);
+        }
         return 0;
     }
 
@@ -49,9 +74,9 @@ namespace USBD
         pin_config->dir = mode;
         pin_config->pull = pull;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
@@ -70,9 +95,9 @@ namespace USBD
         pin_config->val = value;
         pin_config->pin = pin;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
@@ -90,9 +115,9 @@ namespace USBD
 
         pin_config->pin = pin;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return pin_config->val;
     }
@@ -110,9 +135,9 @@ namespace USBD
 
         pin_config->pin = pin;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return pin_config->val;
     }
@@ -131,14 +156,14 @@ namespace USBD
         pin_config->pin = pin;
         pin_config->val = value;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
 
-    int Usbduino::uartSetup(uint32_t baud,uint32_t tx_pin,uint32_t rx_pin,uint32_t device_id)
+    int Usbduino::uartSetup(uint32_t baud, uint32_t tx_pin, uint32_t rx_pin, uint32_t device_id)
     {
         if (!device)
             return -ENODEV;
@@ -155,9 +180,9 @@ namespace USBD
         uart->pin_tx = tx_pin;
         uart->pin_rx = rx_pin;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
@@ -176,16 +201,16 @@ namespace USBD
         uart->id = device_id;
         uart->active = 0;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
 
     int Usbduino::uartWrite(uint8_t *data, uint32_t length, uint32_t device_id)
     {
-        uint32_t t = 0,i = 0;
+        uint32_t t = 0, i = 0;
 
         if (!device)
             return -ENODEV;
@@ -197,21 +222,21 @@ namespace USBD
 
         if (length <= PID_MAX_LEN)
         {
-            //if length of the data to transmit is less than 58 bytes.
+            // if length of the data to transmit is less than 58 bytes.
             packet->length = length;
 
             for (uint32_t x = 0; x < length; x++)
                 packet->data[x] = data[x];
 
-            write(device, buffer, 64);
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-            read(device, buffer, 64);
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
         }
         else
         {
             t = length / PID_MAX_LEN;
 
-            for(uint32_t x = 0; x < t - 1; x++)
+            for (uint32_t x = 0; x < t - 1; x++)
             {
                 packet->length = PID_MAX_LEN;
 
@@ -221,9 +246,9 @@ namespace USBD
                     i++;
                 }
 
-                write(device, buffer, 64);
+                libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-                read(device, buffer, 64);
+                libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
             }
 
             packet->length = length - (t * PID_MAX_LEN);
@@ -234,10 +259,9 @@ namespace USBD
                 i++;
             }
 
-            write(device, buffer, 64);
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-            read(device, buffer, 64);
-            
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
         }
 
         return packet->pid;
@@ -253,11 +277,11 @@ namespace USBD
         packet->pid = PID_UART_RECIEVE;
         packet->intr = device_id;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
-        for(uint32_t x = 0;x < packet->length;x++)
+        for (uint32_t x = 0; x < packet->length; x++)
             data[x] = packet->data[x];
 
         *length = packet->length;
@@ -265,7 +289,7 @@ namespace USBD
         return packet->pid;
     }
 
-    int Usbduino::i2cSetup(uint32_t clock,uint32_t sda_pin,uint32_t scl_pin,uint32_t device_id)
+    int Usbduino::i2cSetup(uint32_t clock, uint32_t sda_pin, uint32_t scl_pin, uint32_t device_id)
     {
         if (!device)
             return -ENODEV;
@@ -282,9 +306,9 @@ namespace USBD
         i2c->pin_scl = scl_pin;
         i2c->pin_sda = sda_pin;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
@@ -303,17 +327,16 @@ namespace USBD
         i2c->id = device_id;
         i2c->active = 0;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
 
-
-    int Usbduino::i2cWrite(uint8_t address,uint8_t *data,uint32_t length,uint32_t device_id)
+    int Usbduino::i2cWrite(uint8_t address, uint8_t *data, uint32_t length, uint32_t device_id)
     {
-        uint32_t t = 0,i = 0;
+        uint32_t t = 0, i = 0;
 
         if (!device)
             return -ENODEV;
@@ -325,15 +348,15 @@ namespace USBD
 
         if (length <= PID_MAX_LEN)
         {
-            //if length of the data to transmit is less than 58 bytes.
+            // if length of the data to transmit is less than 58 bytes.
             packet->length = length;
 
             for (uint32_t x = 0; x < length; x++)
                 packet->data[x] = data[x];
 
-            write(device, buffer, 64);
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-            read(device, buffer, 64);
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
         }
         else
         {
@@ -343,7 +366,7 @@ namespace USBD
         return packet->pid;
     }
 
-    int Usbduino::i2cRead(uint8_t address,uint8_t *data,uint32_t *length,uint32_t device_id)
+    int Usbduino::i2cRead(uint8_t address, uint8_t *data, uint32_t *length, uint32_t device_id)
     {
         if (!device)
             return -ENODEV;
@@ -353,11 +376,11 @@ namespace USBD
         packet->pid = PID_I2C_RECIEVE;
         packet->intr = (uint16_t)(device_id << 8) | address;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
-        for(uint32_t x = 0;x < packet->length;x++)
+        for (uint32_t x = 0; x < packet->length; x++)
             data[x] = packet->data[x];
 
         *length = packet->length;
@@ -365,8 +388,7 @@ namespace USBD
         return packet->pid;
     }
 
-
-    int Usbduino::spiSetup(uint32_t clock,uint32_t tx_pin,uint32_t rx_pin,uint32_t clk_pin,uint32_t device_id)
+    int Usbduino::spiSetup(uint32_t clock, uint32_t tx_pin, uint32_t rx_pin, uint32_t clk_pin, uint32_t device_id)
     {
         if (!device)
             return -ENODEV;
@@ -384,9 +406,9 @@ namespace USBD
         spi->pin_rx = rx_pin;
         spi->pin_clk = clk_pin;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
@@ -405,17 +427,16 @@ namespace USBD
         spi->id = device_id;
         spi->active = 0;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
         return packet->pid;
     }
 
-
-    int Usbduino::spiWrite(uint8_t *data,uint32_t length,uint32_t device_id)
+    int Usbduino::spiWrite(uint8_t *data, uint32_t length, uint32_t device_id)
     {
-        uint32_t t = 0,i = 0;
+        uint32_t t = 0, i = 0;
 
         if (!device)
             return -ENODEV;
@@ -427,15 +448,15 @@ namespace USBD
 
         if (length <= PID_MAX_LEN)
         {
-            //if length of the data to transmit is less than 58 bytes.
+            // if length of the data to transmit is less than 58 bytes.
             packet->length = length;
 
             for (uint32_t x = 0; x < length; x++)
                 packet->data[x] = data[x];
 
-            write(device, buffer, 64);
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-            read(device, buffer, 64);
+            libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
         }
         else
         {
@@ -445,7 +466,7 @@ namespace USBD
         return packet->pid;
     }
 
-    int Usbduino::spiRead(uint8_t *data,uint32_t *length,uint32_t device_id)
+    int Usbduino::spiRead(uint8_t *data, uint32_t *length, uint32_t device_id)
     {
         if (!device)
             return -ENODEV;
@@ -455,11 +476,11 @@ namespace USBD
         packet->pid = PID_SPI_RECIEVE;
         packet->intr = device_id;
 
-        write(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_OUT | 0x1,buffer,0x40,&len,1);
 
-        read(device, buffer, 64);
+        libusb_bulk_transfer(device,LIBUSB_ENDPOINT_IN | 0x1,buffer,0x40,&len,1);
 
-        for(uint32_t x = 0;x < packet->length;x++)
+        for (uint32_t x = 0; x < packet->length; x++)
             data[x] = packet->data[x];
 
         *length = packet->length;
@@ -468,8 +489,9 @@ namespace USBD
     }
 
     void Usbduino::delay(uint32_t ms)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    {   
+        if(ms)
+            std::this_thread::sleep_for(std::chrono::milliseconds(ms));
     }
 
 };

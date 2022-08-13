@@ -1,0 +1,5 @@
+make --dry-run --keep-going --print-directory
+make: Entering directory '/home/maglash/Work/usbduino/host/lib'
+g++ -o bin/blink src/usbd.cpp examples/blink.cpp -lusb-1.0
+make: Leaving directory '/home/maglash/Work/usbduino/host/lib'
+ 
